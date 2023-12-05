@@ -7,21 +7,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-type server struct {
+type Server struct {
 	Address  string
-	LogLevel string
-	DB       database
+	Env      string
+	DB       Database
 	InMemory bool
 }
 
-type database struct {
+type Database struct {
 	Type   string
 	Source string
 }
 
-func MustLoad() server {
+func MustLoad() Server {
 	viper.BindEnv("loglevel")
-	viper.SetDefault("loglevel", "debug")
+	viper.SetDefault("env", "local")
 
 	viper.MustBindEnv("server_address")
 	viper.MustBindEnv("db_type")
@@ -32,11 +32,11 @@ func MustLoad() server {
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
-	return server{
+	return Server{
 		Address:  viper.GetString("server_address"),
-		LogLevel: viper.GetString("loglevel"),
+		Env:      viper.GetString("env"),
 		InMemory: viper.GetBool("memory"),
-		DB: database{
+		DB: Database{
 			Type:   viper.GetString("db_type"),
 			Source: viper.GetString("db_source"),
 		},
