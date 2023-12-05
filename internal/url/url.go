@@ -5,7 +5,7 @@ func GenerateShortURL(longURL string) string {
 }
 
 type URLSaver interface {
-	SaveURL(longURL string) error
+	SaveURL(longURL string, shortURL string) error
 }
 
 func SaveURL(longURL string, saver URLSaver) (string, error) {

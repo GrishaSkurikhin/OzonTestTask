@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/config"
+	saveurl "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/handlers/save-url"
 	mwLogger "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/middleware/logger"
+	"github.com/GrishaSkurikhin/OzonTestTask/internal/url"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/rs/zerolog"
@@ -22,7 +24,12 @@ type restServer struct {
 	*http.Server
 }
 
-func New(cfg config.Server, log *zerolog.Logger) *restServer {
+type Storage interface {
+	url.URLSaver
+	url.URLGetter
+}
+
+func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -31,8 +38,8 @@ func New(cfg config.Server, log *zerolog.Logger) *restServer {
 	router.Use(middleware.Recoverer)
 
 	router.Route("url", func(r chi.Router) {
-		// r.Post("/", )
-		// r.Get("/{shortURL}", )
+		r.Post("/", saveurl.New(*log, strg))
+		r.Get("/{shortURL}", saveurl.New(*log, strg))
 	})
 
 	srv := &http.Server{

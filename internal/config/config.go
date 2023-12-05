@@ -15,7 +15,6 @@ type Server struct {
 }
 
 type Database struct {
-	Type   string
 	Source string
 }
 
@@ -24,7 +23,6 @@ func MustLoad() Server {
 	viper.SetDefault("env", "local")
 
 	viper.MustBindEnv("server_address")
-	viper.MustBindEnv("db_type")
 	viper.MustBindEnv("db_source")
 
 	pflag.Bool("memory", false, "use in-memory source")
@@ -37,7 +35,6 @@ func MustLoad() Server {
 		Env:      viper.GetString("env"),
 		InMemory: viper.GetBool("memory"),
 		DB: Database{
-			Type:   viper.GetString("db_type"),
 			Source: viper.GetString("db_source"),
 		},
 	}
