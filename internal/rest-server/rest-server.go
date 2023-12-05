@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/config"
+	geturl "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/handlers/get-url"
 	saveurl "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/handlers/save-url"
 	mwLogger "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/middleware/logger"
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/url"
@@ -37,9 +38,9 @@ func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
 	router.Use(mwLogger.New(*log))
 	router.Use(middleware.Recoverer)
 
-	router.Route("url", func(r chi.Router) {
-		r.Post("/", saveurl.New(*log, strg))
-		r.Get("/{shortURL}", saveurl.New(*log, strg))
+	router.Route("/url", func(r chi.Router) {
+		r.Post("/", saveurl.New(*log, strg, cfg.Address))
+		r.Get("/{shortURL}", geturl.New(*log, strg))
 	})
 
 	srv := &http.Server{
@@ -68,7 +69,7 @@ func (srv *restServer) Close(ctx context.Context) error {
 
 	err := srv.Shutdown(ctx)
 	if err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: %v", op, err)
 	}
 
 	return nil
