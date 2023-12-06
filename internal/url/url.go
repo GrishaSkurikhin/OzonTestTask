@@ -2,8 +2,8 @@ package url
 
 import (
 	"fmt"
-	"math/rand"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,12 +18,11 @@ func GenerateToken() string {
 	// 2.2. Добавить символ из алфавита с индексом, равным остатку
 	// 2.3. Поделить текущее время на длину алфавита
 	// Уникальность текущего времени гарантирует уникальность сгенерированной строки (в большинстве случаев)
-	// Добавление случайного числа повышает вероятность уникальности сгенерированной строки в случае быстрого повторного вызова функции
 
 	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789"
 	urlLen := 10
 
-	uniqueTime := time.Now().UnixNano() + rand.Int63n(1000)
+	uniqueTime := time.Now().UnixNano()
 	shortURL := strings.Builder{}
 
 	for i := 0; i < urlLen; i++ {
@@ -34,6 +33,7 @@ func GenerateToken() string {
 	return shortURL.String()
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLSaver
 type URLSaver interface {
 	SaveURL(longURL string, shortURL string) error
 	IsShortURLExists(shortURL string) (bool, error)
@@ -44,8 +44,8 @@ func SaveURL(longURL string, host string, saver URLSaver) (string, error) {
 
 	// Валидация URL
 	u, err := url.Parse(longURL)
-	if !(err == nil && u.Scheme != "" && u.Host != "") {
-		return "", customerrors.WrongURL{Info: err.Error()}
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return "", customerrors.WrongURL{Info: "wrong url"}
 	}
 
 	token := GenerateToken()
@@ -72,6 +72,7 @@ func SaveURL(longURL string, host string, saver URLSaver) (string, error) {
 	return shortURL, nil
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLGetter
 type URLGetter interface {
 	GetURL(shortURL string) (string, error)
 }
@@ -79,9 +80,19 @@ type URLGetter interface {
 func GetURL(shortURL string, getter URLGetter) (string, error) {
 	const op = "url.GetURL"
 
+	if !strings.HasPrefix(shortURL, "http://") && !strings.HasPrefix(shortURL, "https://") {
+		shortURL = "http://" + shortURL
+	}
 	u, err := url.Parse(shortURL)
-	if !(err == nil && u.Scheme != "" && u.Host != "") {
-		return "", customerrors.WrongURL{Info: err.Error()}
+	if err != nil {
+		return "", customerrors.WrongURL{Info: "wrong url"}
+	}
+
+	match, err := regexp.MatchString("^/[A-Za-z0-9_]{10}$", u.Path)
+	if !match || err != nil{
+		fmt.Println(shortURL)
+		fmt.Println(u.Path)
+		return "", customerrors.WrongURL{Info: "wrong url"}
 	}
 
 	longURL, err := getter.GetURL(shortURL)

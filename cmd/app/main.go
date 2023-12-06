@@ -1,13 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/config"
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/logger"
 	restserver "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server"
+	inmemory "github.com/GrishaSkurikhin/OzonTestTask/internal/storage/in-memory"
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/storage/postgresql"
+	"github.com/GrishaSkurikhin/OzonTestTask/pkg/closer"
+)
+
+const (
+	shutdownTimeout = 5 * time.Second
 )
 
 func main() {
@@ -17,19 +27,50 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Sprintf("failed to initialize logger: %v", err))
 	}
-
-	zlog.Info().Msg(fmt.Sprintf("starting service on %s", cfg.Address))
 	zlog.Debug().Msg("debug mode is on")
 
+	c := &closer.Closer{}
 
-	storage, err := postgresql.New(cfg.DB.Source)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("failed to connect postgresql: %v", err))
+	var storage restserver.Storage
+	if cfg.InMemory {
+		zlog.Info().Msg("using in-memory storage")
+		storage = inmemory.New()
+	} else {
+		zlog.Info().Msg("using postgresql storage")
+
+		postgres, err := postgresql.New(cfg.DB.Source)
+		if err != nil {
+			log.Fatal(fmt.Sprintf("failed to connect postgresql: %v", err))
+		}
+
+		c.Add(postgres.Disconnect)
+		storage = postgres
 	}
 
-	zlog.Info().Msg("starting rest server")
 	rserver := restserver.New(cfg, zlog, storage)
-	if err := rserver.Start(); err != nil {
-		log.Fatal(fmt.Sprintf("failed to start rest server: %v", err))
+	c.Add(rserver.Close)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		zlog.Info().Msg(fmt.Sprintf("starting rest server on %s", cfg.Address))
+		if err := rserver.Start(); err != nil {
+			log.Fatal(fmt.Sprintf("failed to start rest server: %v", err))
+		}
+	}()
+
+	zlog.Info().Msg("service started")
+
+	<-ctx.Done()
+	zlog.Info().Msg("stopping service")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := c.Close(shutdownCtx); err != nil {
+		zlog.Error().Str("closer error", err.Error())
 	}
+
+	zlog.Info().Msg("service stopped")
 }
