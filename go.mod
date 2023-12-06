@@ -5,6 +5,7 @@ go 1.21.4
 require github.com/GrishaSkurikhin/EffectiveMobileTesting v0.0.0-20230913225737-b8d2ad5733c7
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

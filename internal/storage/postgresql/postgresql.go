@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	urlsTable = "urls"
+	UrlsTable = "urls"
 
 	QueryTimeout = 5 * time.Second
 )
@@ -50,7 +50,7 @@ func (s *OrderStorage) SaveURL(longURL string, shortURL string) error {
 	query := fmt.Sprintf(`
 		INSERT INTO %s (long_url, short_url)
 		VALUES ($1, $2)
-	`, urlsTable)
+	`, UrlsTable)
 
 	tx, err := s.Begin()
 	if err != nil {
@@ -68,6 +68,7 @@ func (s *OrderStorage) SaveURL(longURL string, shortURL string) error {
 
 	_, err = addReq.ExecContext(ctx, longURL, shortURL)
 	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("%s: failed to execute statement: %v", op, err)
 	}
 
@@ -88,7 +89,7 @@ func (s *OrderStorage) IsShortURLExists(shortURL string) (bool, error) {
 			FROM %s
 			WHERE short_url = $1
 		)
-	`, urlsTable)
+	`, UrlsTable)
 
 	checkReq, err := s.Prepare(query)
 	if err != nil {
@@ -115,7 +116,7 @@ func (s *OrderStorage) GetURL(shortURL string) (string, error) {
 		SELECT long_url
 		FROM %s
 		WHERE short_url = $1
-	`, urlsTable)
+	`, UrlsTable)
 
 	getReq, err := s.Prepare(query)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 )
 
 func TestGenerateToken(t *testing.T) {
-	tokensNum := 100000
+	tokensNum := 1000000
 	tokens := make(map[string]struct{}, tokensNum)
 	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789"
 

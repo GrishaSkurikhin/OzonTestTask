@@ -1,28 +1,33 @@
 package inmemory
 
+import (
+	"sync"
+)
+
 type InMemory struct {
-	urls map[string]string
+	urls *sync.Map
 }
 
 func New() *InMemory {
 	return &InMemory{
-		urls: make(map[string]string),
+		urls: &sync.Map{},
 	}
 }
 
 func (i *InMemory) SaveURL(longURL string, shortURL string) error {
-	i.urls[shortURL] = longURL
+	i.urls.Store(shortURL, longURL)
 	return nil
 }
 
 func (i *InMemory) GetURL(shortURL string) (string, error) {
-	if longURL, ok := i.urls[shortURL]; ok {
-		return longURL, nil
+	longURL, ok := i.urls.Load(shortURL)
+	if !ok {
+		return "", nil
 	}
-	return "", nil
+	return longURL.(string), nil
 }
 
 func (i *InMemory) IsShortURLExists(shortURL string) (bool, error) {
-	_, ok := i.urls[shortURL]
+	_, ok := i.urls.Load(shortURL)
 	return ok, nil
 }
