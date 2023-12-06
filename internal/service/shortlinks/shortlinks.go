@@ -1,6 +1,7 @@
-package url
+package shortlinks
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -9,6 +10,8 @@ import (
 
 	customerrors "github.com/GrishaSkurikhin/OzonTestTask/internal/custom-errors"
 )
+
+type ShortlinksService struct{}
 
 func GenerateToken() string {
 	// Алгоритм:
@@ -35,12 +38,12 @@ func GenerateToken() string {
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLSaver
 type URLSaver interface {
-	SaveURL(longURL string, shortURL string) error
-	IsShortURLExists(shortURL string) (bool, error)
+	SaveURL(ctx context.Context, longURL string, shortURL string) error
+	IsShortURLExists(ctx context.Context, shortURL string) (bool, error)
 }
 
-func SaveURL(longURL string, host string, saver URLSaver) (string, error) {
-	const op = "url.SaveURL"
+func (s *ShortlinksService) SaveURL(ctx context.Context, longURL string, host string, saver URLSaver) (string, error) {
+	const op = "service.shortlinks.SaveURL"
 
 	// Валидация URL
 	u, err := url.Parse(longURL)
@@ -53,7 +56,7 @@ func SaveURL(longURL string, host string, saver URLSaver) (string, error) {
 
 	// Проверка на уникальность
 	for {
-		exists, err := saver.IsShortURLExists(shortURL)
+		exists, err := saver.IsShortURLExists(ctx, shortURL)
 		if err != nil {
 			return "", fmt.Errorf("%s: failed to check is url exist: %v", op, err)
 		}
@@ -64,7 +67,7 @@ func SaveURL(longURL string, host string, saver URLSaver) (string, error) {
 		shortURL = host + "/" + token
 	}
 
-	err = saver.SaveURL(longURL, shortURL)
+	err = saver.SaveURL(ctx, longURL, shortURL)
 	if err != nil {
 		return "", fmt.Errorf("%s: failed to save url: %v", op, err)
 	}
@@ -74,11 +77,11 @@ func SaveURL(longURL string, host string, saver URLSaver) (string, error) {
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLGetter
 type URLGetter interface {
-	GetURL(shortURL string) (string, error)
+	GetURL(ctx context.Context, shortURL string) (string, error)
 }
 
-func GetURL(shortURL string, getter URLGetter) (string, error) {
-	const op = "url.GetURL"
+func (s *ShortlinksService) GetURL(ctx context.Context, shortURL string, getter URLGetter) (string, error) {
+	const op = "service.shortlinks.GetURL"
 
 	if !strings.HasPrefix(shortURL, "http://") && !strings.HasPrefix(shortURL, "https://") {
 		shortURL = "http://" + shortURL
@@ -89,13 +92,11 @@ func GetURL(shortURL string, getter URLGetter) (string, error) {
 	}
 
 	match, err := regexp.MatchString("^/[A-Za-z0-9_]{10}$", u.Path)
-	if !match || err != nil{
-		fmt.Println(shortURL)
-		fmt.Println(u.Path)
+	if !match || err != nil {
 		return "", customerrors.WrongURL{Info: "wrong url"}
 	}
 
-	longURL, err := getter.GetURL(shortURL)
+	longURL, err := getter.GetURL(ctx, shortURL)
 	if err != nil {
 		return "", fmt.Errorf("%s: failed to get url: %v", op, err)
 	}

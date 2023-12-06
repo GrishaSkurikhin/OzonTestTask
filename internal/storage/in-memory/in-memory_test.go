@@ -1,6 +1,7 @@
 package inmemory_test
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
@@ -29,24 +30,24 @@ func TestInMemory(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		go func() {
-			isExist, err := storage.IsShortURLExists(tc.shortURL)
+			isExist, err := storage.IsShortURLExists(context.Background(), tc.shortURL)
 			if err != nil {
 				t.Errorf("IsShortURLExists() error = %v", err)
 			}
 			require.False(t, isExist)
 
-			err = storage.SaveURL(tc.longURL, tc.shortURL)
+			err = storage.SaveURL(context.Background(), tc.longURL, tc.shortURL)
 			if err != nil {
 				t.Errorf("SaveURL() error = %v", err)
 			}
 
-			isExist, err = storage.IsShortURLExists(tc.shortURL)
+			isExist, err = storage.IsShortURLExists(context.Background(), tc.shortURL)
 			if err != nil {
 				t.Errorf("IsShortURLExists() error = %v", err)
 			}
 			require.True(t, isExist)
 
-			longURL, err := storage.GetURL(tc.shortURL)
+			longURL, err := storage.GetURL(context.Background(), tc.shortURL)
 			if err != nil {
 				t.Errorf("GetURL() error = %v", err)
 			}

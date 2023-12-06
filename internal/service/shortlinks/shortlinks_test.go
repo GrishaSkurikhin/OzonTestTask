@@ -1,14 +1,15 @@
-package url_test
+package shortlinks_test
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"strings"
 	"testing"
 
 	customerrors "github.com/GrishaSkurikhin/OzonTestTask/internal/custom-errors"
-	"github.com/GrishaSkurikhin/OzonTestTask/internal/url"
-	"github.com/GrishaSkurikhin/OzonTestTask/internal/url/mocks"
+	"github.com/GrishaSkurikhin/OzonTestTask/internal/service/shortlinks"
+	"github.com/GrishaSkurikhin/OzonTestTask/internal/service/shortlinks/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,7 @@ func TestGenerateToken(t *testing.T) {
 	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789"
 
 	for i := 0; i < tokensNum; i++ {
-		token := url.GenerateToken()
+		token := shortlinks.GenerateToken()
 		if len(token) != 10 {
 			t.Errorf("token %s has wrong length", token)
 		}
@@ -39,6 +40,7 @@ func TestGenerateToken(t *testing.T) {
 
 func TestSaveURL(t *testing.T) {
 	host := "localhost:8080"
+	service := shortlinks.ShortlinksService{}
 
 	cases := []struct {
 		name             string
@@ -92,27 +94,27 @@ func TestSaveURL(t *testing.T) {
 
 			if tc.name != "Wrong URL" {
 				if tc.name == "Repeat tokens" {
-					urlSaverMock.On("IsShortURLExists", mock.AnythingOfType("string")).
+					urlSaverMock.On("IsShortURLExists", mock.Anything, mock.AnythingOfType("string")).
 						Return(true, tc.IsExistMockError).
 						Times(2)
 
-					urlSaverMock.On("IsShortURLExists", mock.AnythingOfType("string")).
+					urlSaverMock.On("IsShortURLExists", mock.Anything, mock.AnythingOfType("string")).
 						Return(false, tc.IsExistMockError).
 						Once()
 				} else {
-					urlSaverMock.On("IsShortURLExists", mock.AnythingOfType("string")).
+					urlSaverMock.On("IsShortURLExists", mock.Anything, mock.AnythingOfType("string")).
 						Return(false, tc.IsExistMockError).
 						Once()
 				}
 
 				if tc.IsExistMockError == nil {
-					urlSaverMock.On("SaveURL", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
+					urlSaverMock.On("SaveURL", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).
 						Return(tc.SaveMockError).
 						Once()
 				}
 			}
 
-			_, err := url.SaveURL(tc.longURL, host, urlSaverMock)
+			_, err := service.SaveURL(context.Background(), tc.longURL, host, urlSaverMock)
 
 			if tc.Error != nil {
 				require.ErrorAs(t, err, &tc.Error)
@@ -127,6 +129,8 @@ func TestGetURL(t *testing.T) {
 	host1 := "localhost:8080/"
 	host2 := "http://example.com/"
 	host3 := "example.com/"
+
+	service := shortlinks.ShortlinksService{}
 
 	cases := []struct {
 		name      string
@@ -200,12 +204,12 @@ func TestGetURL(t *testing.T) {
 			urlGetterMock := mocks.NewURLGetter(t)
 
 			if tc.name != "Wrong URL" && tc.name != "Wrong size of token" && tc.name != "Wrong token" {
-				urlGetterMock.On("GetURL", mock.AnythingOfType("string")).
+				urlGetterMock.On("GetURL", mock.Anything, mock.AnythingOfType("string")).
 					Return(tc.longURL, tc.MockError).
 					Once()
 			}
 
-			_, err := url.GetURL(tc.shortURL, urlGetterMock)
+			_, err := service.GetURL(context.Background(), tc.shortURL, urlGetterMock)
 
 			if tc.Error != nil {
 				require.ErrorAs(t, err, &tc.Error)

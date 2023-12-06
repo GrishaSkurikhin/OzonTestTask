@@ -1,13 +1,14 @@
 package saveurl
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
 
 	customerrors "github.com/GrishaSkurikhin/OzonTestTask/internal/custom-errors"
 	resp "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/api/response"
-	"github.com/GrishaSkurikhin/OzonTestTask/internal/url"
+	"github.com/GrishaSkurikhin/OzonTestTask/internal/service/shortlinks"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog"
@@ -22,7 +23,11 @@ type Response struct {
 	Url string `json:"shortURL"`
 }
 
-func New(log zerolog.Logger, saver url.URLSaver, host string) http.HandlerFunc {
+type ServiceURLGetter interface {
+	SaveURL(ctx context.Context, longURL string, host string, saver shortlinks.URLSaver) (string, error)
+}
+
+func New(log zerolog.Logger, saver shortlinks.URLSaver, host string, service ServiceURLGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.saveurl.New"
 
@@ -45,7 +50,7 @@ func New(log zerolog.Logger, saver url.URLSaver, host string) http.HandlerFunc {
 		}
 		log.Info().Msg("request body decoded")
 
-		shortURL, err := url.SaveURL(req.LongURL, host, saver)
+		shortURL, err := service.SaveURL(context.Background(), req.LongURL, host, saver)
 		if err != nil {
 			switch err.(type) {
 			case customerrors.WrongURL:

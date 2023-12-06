@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package shortlinks;
+
+option go_package = "GrishaSkurikhin.shortlinks.v1;shortlinksv1";
+
+service Shortlinks {
+    rpc GetURL(GetURLRequest) returns (GetURLResponse) {}
+    rpc SaveURL(SaveURLRequest) returns (SaveURLResponse) {}
+}
+
+message GetURLRequest {
+    string shortURL = 1;
+}
+
+message GetURLResponse {
+    string longURL = 1;
+}
+
+message SaveURLRequest {
+    string longURL = 1;
+}
+
+message SaveURLResponse {
+    string shortURL = 1;
+}
+

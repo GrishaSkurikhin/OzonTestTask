@@ -1,6 +1,7 @@
 package postgresql_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -55,7 +56,7 @@ func TestSaveURL(t *testing.T) {
 				mock.ExpectCommit()
 			}
 
-			err = storage.SaveURL(tc.longURL, tc.shortURL)
+			err = storage.SaveURL(context.Background(), tc.longURL, tc.shortURL)
 			if (err != nil) != tc.wantError {
 				t.Errorf("SaveURL() error = %v, wantError %v", err, tc.wantError)
 			}
@@ -110,7 +111,7 @@ func TestIsShortURLExists(t *testing.T) {
 				mock.ExpectQuery(query).WithArgs(tc.shortURL).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 			}
 
-			_, err = storage.IsShortURLExists(tc.shortURL)
+			_, err = storage.IsShortURLExists(context.Background(), tc.shortURL)
 			if (err != nil) != tc.wantError {
 				t.Errorf("IsShortURLExists() error = %v, wantError %v", err, tc.wantError)
 			}
@@ -164,7 +165,7 @@ func TestGetURL(t *testing.T) {
 				mock.ExpectQuery(query).WithArgs(tc.shortURL).WillReturnRows(sqlmock.NewRows([]string{"long_url"}).AddRow("https://example.com"))
 			}
 
-			_, err = storage.GetURL(tc.shortURL)
+			_, err = storage.GetURL(context.Background(), tc.shortURL)
 			if (err != nil) != tc.wantError {
 				t.Errorf("GetURL() error = %v, wantError %v", err, tc.wantError)
 			}

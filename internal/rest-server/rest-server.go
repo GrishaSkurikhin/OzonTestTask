@@ -9,7 +9,7 @@ import (
 	geturl "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/handlers/get-url"
 	saveurl "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/handlers/save-url"
 	mwLogger "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/middleware/logger"
-	"github.com/GrishaSkurikhin/OzonTestTask/internal/url"
+	"github.com/GrishaSkurikhin/OzonTestTask/internal/service/shortlinks"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/rs/zerolog"
@@ -26,11 +26,16 @@ type restServer struct {
 }
 
 type Storage interface {
-	url.URLSaver
-	url.URLGetter
+	shortlinks.URLSaver
+	shortlinks.URLGetter
+}
+
+type Shortlinks interface {
+	geturl.ServiceURLGetter
 }
 
 func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
+	shortlinks := &shortlinks.ShortlinksService{}
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -39,8 +44,8 @@ func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
 	router.Use(middleware.Recoverer)
 
 	router.Route("/url", func(r chi.Router) {
-		r.Post("/", saveurl.New(*log, strg, cfg.Address))
-		r.Get("/{shortURL}", geturl.New(*log, strg))
+		r.Post("/", saveurl.New(*log, strg, cfg.Address, shortlinks))
+		r.Get("/{shortURL}", geturl.New(*log, strg, shortlinks))
 	})
 
 	srv := &http.Server{

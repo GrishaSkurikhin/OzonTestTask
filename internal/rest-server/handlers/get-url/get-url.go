@@ -1,11 +1,12 @@
 package geturl
 
 import (
+	"context"
 	"net/http"
 
 	customerrors "github.com/GrishaSkurikhin/OzonTestTask/internal/custom-errors"
 	resp "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server/api/response"
-	"github.com/GrishaSkurikhin/OzonTestTask/internal/url"
+	"github.com/GrishaSkurikhin/OzonTestTask/internal/service/shortlinks"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog"
@@ -16,7 +17,11 @@ type Response struct {
 	Url string `json:"url"`
 }
 
-func New(log zerolog.Logger, getter url.URLGetter) http.HandlerFunc {
+type ServiceURLGetter interface {
+	GetURL(ctx context.Context, shortURL string, getter shortlinks.URLGetter) (string, error)
+}
+
+func New(log zerolog.Logger, getter shortlinks.URLGetter, service ServiceURLGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.geturl.New"
 
@@ -26,7 +31,7 @@ func New(log zerolog.Logger, getter url.URLGetter) http.HandlerFunc {
 			Logger()
 
 		shortURL := r.URL.Query().Get("shortURL")
-		longURL, err := url.GetURL(shortURL, getter)
+		longURL, err := service.GetURL(context.Background(), shortURL, getter)
 
 		if err != nil {
 			switch err.(type) {

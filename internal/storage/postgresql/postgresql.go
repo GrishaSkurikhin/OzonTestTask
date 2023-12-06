@@ -4,15 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	_ "github.com/lib/pq"
 )
 
 const (
 	UrlsTable = "urls"
-
-	QueryTimeout = 5 * time.Second
 )
 
 type OrderStorage struct {
@@ -44,7 +41,7 @@ func (s *OrderStorage) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-func (s *OrderStorage) SaveURL(longURL string, shortURL string) error {
+func (s *OrderStorage) SaveURL(ctx context.Context, longURL string, shortURL string) error {
 	const op = "storage.postgresql.SaveURL"
 
 	query := fmt.Sprintf(`
@@ -63,9 +60,6 @@ func (s *OrderStorage) SaveURL(longURL string, shortURL string) error {
 	}
 	defer addReq.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), QueryTimeout)
-	defer cancel()
-
 	_, err = addReq.ExecContext(ctx, longURL, shortURL)
 	if err != nil {
 		tx.Rollback()
@@ -80,7 +74,7 @@ func (s *OrderStorage) SaveURL(longURL string, shortURL string) error {
 	return nil
 }
 
-func (s *OrderStorage) IsShortURLExists(shortURL string) (bool, error) {
+func (s *OrderStorage) IsShortURLExists(ctx context.Context, shortURL string) (bool, error) {
 	const op = "storage.postgresql.IsShortURLExists"
 
 	query := fmt.Sprintf(`
@@ -97,9 +91,6 @@ func (s *OrderStorage) IsShortURLExists(shortURL string) (bool, error) {
 	}
 	defer checkReq.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), QueryTimeout)
-	defer cancel()
-
 	var exists bool
 	err = checkReq.QueryRowContext(ctx, shortURL).Scan(&exists)
 	if err != nil {
@@ -109,7 +100,7 @@ func (s *OrderStorage) IsShortURLExists(shortURL string) (bool, error) {
 	return exists, nil
 }
 
-func (s *OrderStorage) GetURL(shortURL string) (string, error) {
+func (s *OrderStorage) GetURL(ctx context.Context, shortURL string) (string, error) {
 	const op = "storage.postgresql.GetURL"
 
 	query := fmt.Sprintf(`
@@ -123,9 +114,6 @@ func (s *OrderStorage) GetURL(shortURL string) (string, error) {
 		return "", fmt.Errorf("%s: failed to prepare statement: %v", op, err)
 	}
 	defer getReq.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), QueryTimeout)
-	defer cancel()
 
 	var longURL string
 	err = getReq.QueryRowContext(ctx, shortURL).Scan(&longURL)

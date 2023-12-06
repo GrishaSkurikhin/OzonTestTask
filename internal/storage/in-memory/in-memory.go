@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"context"
 	"sync"
 )
 
@@ -14,12 +15,12 @@ func New() *InMemory {
 	}
 }
 
-func (i *InMemory) SaveURL(longURL string, shortURL string) error {
+func (i *InMemory) SaveURL(ctx context.Context, longURL string, shortURL string) error {
 	i.urls.Store(shortURL, longURL)
 	return nil
 }
 
-func (i *InMemory) GetURL(shortURL string) (string, error) {
+func (i *InMemory) GetURL(ctx context.Context, shortURL string) (string, error) {
 	longURL, ok := i.urls.Load(shortURL)
 	if !ok {
 		return "", nil
@@ -27,7 +28,7 @@ func (i *InMemory) GetURL(shortURL string) (string, error) {
 	return longURL.(string), nil
 }
 
-func (i *InMemory) IsShortURLExists(shortURL string) (bool, error) {
+func (i *InMemory) IsShortURLExists(ctx context.Context, shortURL string) (bool, error) {
 	_, ok := i.urls.Load(shortURL)
 	return ok, nil
 }
