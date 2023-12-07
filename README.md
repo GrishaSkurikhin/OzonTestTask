@@ -28,8 +28,8 @@
 {
     "longURL": "url"
 }
-Возвращает json с новым сокращенным url.
 ```
+Возвращает json с новым сокращенным url.
 2. **GetURL: GET host:url**. Принимает на вход json вида:
 ```json
 {
@@ -57,3 +57,5 @@ docker-compose up
 RUN go build -o bin ./cmd/app
 ```
 ключ --memory.
+
+Тесты запускаются командой go test ./...
