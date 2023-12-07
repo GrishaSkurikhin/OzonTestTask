@@ -23,11 +23,12 @@ type Response struct {
 	Url string `json:"shortURL"`
 }
 
-type ServiceURLGetter interface {
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=ServiceURLSaver
+type ServiceURLSaver interface {
 	SaveURL(ctx context.Context, longURL string, host string, saver shortlinks.URLSaver) (string, error)
 }
 
-func New(log zerolog.Logger, saver shortlinks.URLSaver, host string, service ServiceURLGetter) http.HandlerFunc {
+func New(log zerolog.Logger, saver shortlinks.URLSaver, host string, service ServiceURLSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.saveurl.New"
 
@@ -49,6 +50,13 @@ func New(log zerolog.Logger, saver shortlinks.URLSaver, host string, service Ser
 			return
 		}
 		log.Info().Msg("request body decoded")
+
+		longURL := req.LongURL
+		if longURL == "" {
+			render.JSON(w, r, resp.Error("url is required"))
+			log.Error().Msg("url is empty")
+			return
+		}
 
 		shortURL, err := service.SaveURL(context.Background(), req.LongURL, host, saver)
 		if err != nil {

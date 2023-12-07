@@ -2,6 +2,8 @@ package geturl
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 
 	customerrors "github.com/GrishaSkurikhin/OzonTestTask/internal/custom-errors"
@@ -12,11 +14,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type Request struct {
+	ShortURL string `json:"shortURL"`
+}
+
 type Response struct {
 	resp.Response
 	Url string `json:"url"`
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=ServiceURLGetter
 type ServiceURLGetter interface {
 	GetURL(ctx context.Context, shortURL string, getter shortlinks.URLGetter) (string, error)
 }
@@ -30,7 +37,27 @@ func New(log zerolog.Logger, getter shortlinks.URLGetter, service ServiceURLGett
 			Str("request_id", middleware.GetReqID(r.Context())).
 			Logger()
 
-		shortURL := r.URL.Query().Get("shortURL")
+		var req Request
+		err := render.DecodeJSON(r.Body, &req)
+		if errors.Is(err, io.EOF) {
+			log.Error().Str("request body is empty", err.Error())
+			render.JSON(w, r, resp.Error("empty request"))
+			return
+		}
+		if err != nil {
+			log.Error().Str("failed to decode request body", err.Error())
+			render.JSON(w, r, resp.Error("failed to decode request"))
+			return
+		}
+		log.Info().Msg("request body decoded")
+
+		shortURL := req.ShortURL
+		if shortURL == "" {
+			render.JSON(w, r, resp.Error("url is required"))
+			log.Error().Msg("url is empty")
+			return
+		}
+
 		longURL, err := service.GetURL(context.Background(), shortURL, getter)
 
 		if err != nil {

@@ -3,6 +3,7 @@ package inmemory_test
 import (
 	"context"
 	"strconv"
+	"sync"
 	"testing"
 
 	inmemory "github.com/GrishaSkurikhin/OzonTestTask/internal/storage/in-memory"
@@ -27,9 +28,13 @@ func TestInMemory(t *testing.T) {
 		})
 	}
 
+	var wg sync.WaitGroup
 	for _, tc := range cases {
 		tc := tc
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
+
 			isExist, err := storage.IsShortURLExists(context.Background(), tc.shortURL)
 			if err != nil {
 				t.Errorf("IsShortURLExists() error = %v", err)
@@ -54,4 +59,5 @@ func TestInMemory(t *testing.T) {
 			require.Equal(t, tc.longURL, longURL)
 		}()
 	}
+	wg.Wait()
 }

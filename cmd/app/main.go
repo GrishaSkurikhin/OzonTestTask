@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/config"
+	grpcserver "github.com/GrishaSkurikhin/OzonTestTask/internal/grpc-server"
 	"github.com/GrishaSkurikhin/OzonTestTask/internal/logger"
 	restserver "github.com/GrishaSkurikhin/OzonTestTask/internal/rest-server"
 	inmemory "github.com/GrishaSkurikhin/OzonTestTask/internal/storage/in-memory"
@@ -50,13 +51,23 @@ func main() {
 	rserver := restserver.New(cfg, zlog, storage)
 	c.Add(rserver.Close)
 
+	gserver := grpcserver.New(zlog, cfg.ShortURLHost, storage)
+	
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
-		zlog.Info().Msg(fmt.Sprintf("starting rest server on %s", cfg.Address))
+		zlog.Info().Msg(fmt.Sprintf("starting rest server on port %d", cfg.RestPort))
 		if err := rserver.Start(); err != nil {
 			log.Fatal(fmt.Sprintf("failed to start rest server: %v", err))
+		}
+	}()
+
+	go func() {
+		zlog.Info().Msg(fmt.Sprintf("starting grpc server on port %d", cfg.GRPCPort))
+		if err := grpcserver.Run(gserver, cfg.GRPCPort); err != nil {
+			log.Fatal(fmt.Sprintf("failed to start grpc server: %v", err))
 		}
 	}()
 
@@ -67,7 +78,8 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-
+	
+	gserver.GracefulStop()
 	if err := c.Close(shutdownCtx); err != nil {
 		zlog.Error().Str("closer error", err.Error())
 	}

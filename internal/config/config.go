@@ -8,10 +8,12 @@ import (
 )
 
 type Server struct {
-	Address  string
-	Env      string
-	DB       Database
-	InMemory bool
+	RestPort     int
+	GRPCPort     int
+	ShortURLHost string
+	Env          string
+	DB           Database
+	InMemory     bool
 }
 
 type Database struct {
@@ -19,11 +21,15 @@ type Database struct {
 }
 
 func MustLoad() Server {
-	viper.BindEnv("loglevel")
 	viper.SetDefault("env", "local")
+	viper.SetDefault("short_url_host", "http://localhost:8080")
 
-	viper.MustBindEnv("server_address")
-	viper.MustBindEnv("db_source")
+	viper.BindEnv("env")
+	viper.BindEnv("short_url_host")
+	viper.BindEnv("db_source")
+
+	viper.MustBindEnv("rest_port")
+	viper.MustBindEnv("grpc_port")
 
 	pflag.Bool("memory", false, "use in-memory source")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -31,9 +37,11 @@ func MustLoad() Server {
 	viper.BindPFlags(pflag.CommandLine)
 
 	return Server{
-		Address:  viper.GetString("server_address"),
-		Env:      viper.GetString("env"),
-		InMemory: viper.GetBool("memory"),
+		RestPort:     viper.GetInt("rest_port"),
+		GRPCPort:     viper.GetInt("grpc_port"),
+		ShortURLHost: viper.GetString("short_url_host"),
+		Env:          viper.GetString("env"),
+		InMemory:     viper.GetBool("memory"),
 		DB: Database{
 			Source: viper.GetString("db_source"),
 		},

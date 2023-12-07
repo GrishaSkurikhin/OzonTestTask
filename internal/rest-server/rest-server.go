@@ -32,6 +32,7 @@ type Storage interface {
 
 type Shortlinks interface {
 	geturl.ServiceURLGetter
+	saveurl.ServiceURLSaver
 }
 
 func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
@@ -43,13 +44,19 @@ func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
 	router.Use(mwLogger.New(*log))
 	router.Use(middleware.Recoverer)
 
+	router.Route("/", func(r chi.Router)  {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("hello"))
+		})
+	})
+
 	router.Route("/url", func(r chi.Router) {
-		r.Post("/", saveurl.New(*log, strg, cfg.Address, shortlinks))
-		r.Get("/{shortURL}", geturl.New(*log, strg, shortlinks))
+		r.Post("/save", saveurl.New(*log, strg, cfg.ShortURLHost, shortlinks))
+		r.Get("/", geturl.New(*log, strg, shortlinks))
 	})
 
 	srv := &http.Server{
-		Addr:         cfg.Address,
+		Addr:         fmt.Sprintf("localhost:%d", cfg.RestPort),
 		Handler:      router,
 		ReadTimeout:  ReadTimeout,
 		WriteTimeout: WriteTimeout,
