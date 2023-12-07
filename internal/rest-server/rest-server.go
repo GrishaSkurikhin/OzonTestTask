@@ -44,12 +44,6 @@ func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
 	router.Use(mwLogger.New(*log))
 	router.Use(middleware.Recoverer)
 
-	router.Route("/", func(r chi.Router)  {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("hello"))
-		})
-	})
-
 	router.Route("/url", func(r chi.Router) {
 		r.Post("/save", saveurl.New(*log, strg, cfg.ShortURLHost, shortlinks))
 		r.Get("/", geturl.New(*log, strg, shortlinks))
