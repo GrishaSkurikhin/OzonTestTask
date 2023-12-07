@@ -46,8 +46,12 @@ func (s *ShortlinksService) SaveURL(ctx context.Context, longURL string, host st
 	const op = "service.shortlinks.SaveURL"
 
 	// Валидация URL
-	u, err := url.Parse(longURL)
-	if err != nil || u.Scheme == "" || u.Host == "" {
+	if !strings.HasPrefix(longURL, "http://") && !strings.HasPrefix(longURL, "https://") {
+		longURL = "http://" + longURL
+	}
+
+	_, err := url.Parse(longURL)
+	if err != nil {
 		return "", customerrors.WrongURL{Info: "wrong url"}
 	}
 

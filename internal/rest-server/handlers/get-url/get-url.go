@@ -3,6 +3,7 @@ package geturl
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -40,21 +41,21 @@ func New(log zerolog.Logger, getter shortlinks.URLGetter, service ServiceURLGett
 		var req Request
 		err := render.DecodeJSON(r.Body, &req)
 		if errors.Is(err, io.EOF) {
-			log.Error().Str("request body is empty", err.Error())
+			log.Error().Str(fmt.Sprintf("%s: request body is empty", op), err.Error())
 			render.JSON(w, r, resp.Error("empty request"))
 			return
 		}
 		if err != nil {
-			log.Error().Str("failed to decode request body", err.Error())
+			log.Error().Str(fmt.Sprintf("%s: failed to decode request body", op), err.Error())
 			render.JSON(w, r, resp.Error("failed to decode request"))
 			return
 		}
-		log.Info().Msg("request body decoded")
+		log.Info().Msg(fmt.Sprintf("%s: request body decoded", op))
 
 		shortURL := req.ShortURL
 		if shortURL == "" {
 			render.JSON(w, r, resp.Error("url is required"))
-			log.Error().Msg("url is empty")
+			log.Error().Msg(fmt.Sprintf("%s: url is empty", op))
 			return
 		}
 
@@ -69,12 +70,12 @@ func New(log zerolog.Logger, getter shortlinks.URLGetter, service ServiceURLGett
 			default:
 				render.JSON(w, r, resp.Error("internal error"))
 			}
-			log.Error().Str("failed to get url", err.Error())
+			log.Error().Str(fmt.Sprintf("%s: failed to get url", op), err.Error())
 			return
 		}
 
 		render.JSON(w, r, ResponseOK(longURL))
-		log.Info().Msg("url found and submitted")
+		log.Info().Msg(fmt.Sprintf("%s: url found and submitted", op))
 	}
 }
 

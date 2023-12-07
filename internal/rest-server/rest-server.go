@@ -56,7 +56,7 @@ func New(cfg config.Server, log *zerolog.Logger, strg Storage) *restServer {
 	})
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf("localhost:%d", cfg.RestPort),
+		Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.RestPort),
 		Handler:      router,
 		ReadTimeout:  ReadTimeout,
 		WriteTimeout: WriteTimeout,

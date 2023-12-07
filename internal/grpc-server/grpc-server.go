@@ -31,6 +31,7 @@ type serverAPI struct {
 	shortlinks   Shortlinks
 	storage      Storage
 	shortURLHost string
+	log *zerolog.Logger
 }
 
 func New(log *zerolog.Logger, shortURLHost string, strg Storage) *grpc.Server {
@@ -53,7 +54,7 @@ func New(log *zerolog.Logger, shortURLHost string, strg Storage) *grpc.Server {
 	))
 
 	shortlinksService := &shortlinks.ShortlinksService{}
-	Register(gRPCServer, shortlinksService, strg, shortURLHost)
+	Register(gRPCServer, shortlinksService, strg, shortURLHost, log)
 
 	return gRPCServer
 }
@@ -78,27 +79,34 @@ func Run(gRPCServer *grpc.Server, port int) error {
 	return nil
 }
 
-func Register(gRPCServer *grpc.Server, shortlinks Shortlinks, strg Storage, shortURLHost string) {
+func Register(gRPCServer *grpc.Server, shortlinks Shortlinks, strg Storage, shortURLHost string, log *zerolog.Logger) {
 	shortlinksv1.RegisterShortlinksServer(gRPCServer, &serverAPI{
 		shortlinks: shortlinks, 
 		storage: strg, 
 		shortURLHost: shortURLHost,
+		log: log,
 	})
 }
 
 func (s *serverAPI) GetURL(ctx context.Context, in *shortlinksv1.GetURLRequest) (*shortlinksv1.GetURLResponse, error) {
+	const op = "grpcserver.GetURL"
+
 	if in.ShortURL == "" {
+		s.log.Error().Msg(fmt.Sprintf("%s: url is empty", op))
 		return nil, status.Error(codes.InvalidArgument, "url is required")
 	}
 
 	longURL, err := s.shortlinks.GetURL(context.Background(), in.ShortURL, s.storage)
 	if err != nil {
-		switch err.(type) {
+		switch t := err.(type) {
 		case customerrors.URLNotFound:
+			s.log.Error().Msg(fmt.Sprintf("%s: url not found", op))
 			return nil, status.Error(codes.InvalidArgument, "url not found")
 		case customerrors.WrongURL:
+			s.log.Error().Msg(fmt.Sprintf("%s: wrong url", op))
 			return nil, status.Error(codes.InvalidArgument, "wrong url")
 		default:
+			s.log.Error().Msg(fmt.Sprintf("%s: internal error: %v", op, t))
 			return nil, status.Error(codes.InvalidArgument, "internal error")
 		}
 	}
@@ -107,7 +115,10 @@ func (s *serverAPI) GetURL(ctx context.Context, in *shortlinksv1.GetURLRequest) 
 }
 
 func (s *serverAPI) SaveURL(ctx context.Context, in *shortlinksv1.SaveURLRequest) (*shortlinksv1.SaveURLResponse, error) {
+	const op = "grpcserver.SaveURL"
+
 	if in.LongURL == "" {
+		s.log.Error().Msg(fmt.Sprintf("%s: url is empty", op))
 		return nil, status.Error(codes.InvalidArgument, "url is required")
 	}
 
@@ -115,8 +126,10 @@ func (s *serverAPI) SaveURL(ctx context.Context, in *shortlinksv1.SaveURLRequest
 	if err != nil {
 		switch err.(type) {
 		case customerrors.WrongURL:
+			s.log.Error().Msg(fmt.Sprintf("%s: wrong url", op))
 			return nil, status.Error(codes.InvalidArgument, "wrong url")
 		default:
+			s.log.Error().Msg(fmt.Sprintf("%s: internal error", op))
 			return nil, status.Error(codes.InvalidArgument, "internal error")
 		}
 	}

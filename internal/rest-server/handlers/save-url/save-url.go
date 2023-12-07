@@ -3,6 +3,7 @@ package saveurl
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -40,21 +41,21 @@ func New(log zerolog.Logger, saver shortlinks.URLSaver, host string, service Ser
 		var req Request
 		err := render.DecodeJSON(r.Body, &req)
 		if errors.Is(err, io.EOF) {
-			log.Error().Str("request body is empty", err.Error())
+			log.Error().Str(fmt.Sprintf("%s: request body is empty", op), err.Error())
 			render.JSON(w, r, resp.Error("empty request"))
 			return
 		}
 		if err != nil {
-			log.Error().Str("failed to decode request body", err.Error())
+			log.Error().Str(fmt.Sprintf("%s: failed to decode request body", op), err.Error())
 			render.JSON(w, r, resp.Error("failed to decode request"))
 			return
 		}
-		log.Info().Msg("request body decoded")
+		log.Info().Msg(fmt.Sprintf("%s: request body decoded", op))
 
 		longURL := req.LongURL
 		if longURL == "" {
 			render.JSON(w, r, resp.Error("url is required"))
-			log.Error().Msg("url is empty")
+			log.Error().Msg(fmt.Sprintf("%s: url is empty", op))
 			return
 		}
 
@@ -66,12 +67,12 @@ func New(log zerolog.Logger, saver shortlinks.URLSaver, host string, service Ser
 			default:
 				render.JSON(w, r, resp.Error("internal error"))
 			}
-			log.Error().Str("failed to get url", err.Error())
+			log.Error().Str(fmt.Sprintf("%s: failed to get url", op), err.Error())
 			return
 		}
 
 		render.JSON(w, r, ResponseOK(shortURL))
-		log.Info().Msg("url saved successfully")
+		log.Info().Msg(fmt.Sprintf("%s: url saved successfully", op))
 	}
 }
 

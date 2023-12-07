@@ -118,6 +118,9 @@ func (s *OrderStorage) GetURL(ctx context.Context, shortURL string) (string, err
 	var longURL string
 	err = getReq.QueryRowContext(ctx, shortURL).Scan(&longURL)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
 		return "", fmt.Errorf("%s: failed to execute statement: %v", op, err)
 	}
 

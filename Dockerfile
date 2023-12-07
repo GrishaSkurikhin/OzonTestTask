@@ -7,7 +7,7 @@ WORKDIR /app
 RUN go mod download && go mod verify
 RUN go build -o bin ./cmd/app
 
-EXPOSE 8080
 EXPOSE 8081
+EXPOSE 8082
 
 CMD ["/app/bin"]
